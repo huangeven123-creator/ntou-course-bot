@@ -16,35 +16,39 @@ def init_db():
     except ValueError:
         # Initialize
         cred = None
-        if config.FIREBASE_SERVICE_ACCOUNT_JSON:
+        import sys
+        
+        json_str = config.FIREBASE_SERVICE_ACCOUNT_JSON
+        if json_str:
             try:
-                service_account_info = json.loads(config.FIREBASE_SERVICE_ACCOUNT_JSON)
+                sys.stderr.write(f"FIREBASE_SERVICE_ACCOUNT_JSON env var length: {len(json_str)}\n")
+                service_account_info = json.loads(json_str)
                 if "private_key" in service_account_info:
                     service_account_info["private_key"] = service_account_info["private_key"].replace("\\n", "\n")
                 cred = credentials.Certificate(service_account_info)
-                print("Initialized Firebase via service account JSON string.")
+                sys.stderr.write("Successfully initialized Firebase via service account JSON.\n")
             except Exception as e:
-                print(f"Error parsing FIREBASE_SERVICE_ACCOUNT_JSON: {e}")
+                sys.stderr.write(f"Error parsing FIREBASE_SERVICE_ACCOUNT_JSON: {e}\n")
+                raise e
         
         if cred is None and config.FIREBASE_KEY_FILE_PATH:
             try:
                 cred = credentials.Certificate(config.FIREBASE_KEY_FILE_PATH)
-                print(f"Initialized Firebase via file: {config.FIREBASE_KEY_FILE_PATH}")
+                sys.stderr.write(f"Initialized Firebase via file: {config.FIREBASE_KEY_FILE_PATH}\n")
             except Exception as e:
-                print(f"Error loading FIREBASE_KEY_FILE_PATH: {e}")
+                sys.stderr.write(f"Error loading FIREBASE_KEY_FILE_PATH: {e}\n")
                 
         if cred is None:
-            # Fallback to application default credentials (useful in some GCP environments)
             try:
                 cred = credentials.ApplicationDefault()
-                print("Initialized Firebase via Application Default Credentials.")
+                sys.stderr.write("Initialized Firebase via Application Default Credentials.\n")
             except Exception as e:
-                print("WARNING: Firebase credentials could not be loaded. Database operations may fail.")
+                sys.stderr.write(f"WARNING: Firebase credentials could not be loaded: {e}\n")
         
         if cred:
             firebase_admin.initialize_app(cred)
         else:
-            firebase_admin.initialize_app()
+            raise ValueError("No valid Firebase credentials provided. Service cannot start.")
             
     db = firestore.client()
     return db
