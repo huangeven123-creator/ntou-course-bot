@@ -22,6 +22,19 @@ def init_db():
         if json_str:
             try:
                 sys.stderr.write(f"FIREBASE_SERVICE_ACCOUNT_JSON env var length: {len(json_str)}\n")
+                
+                # Check if it is base64 encoded (doesn't start with '{')
+                json_str_stripped = json_str.strip()
+                if not json_str_stripped.startswith("{"):
+                    import base64
+                    try:
+                        decoded = base64.b64decode(json_str_stripped).decode('utf-8')
+                        if decoded.strip().startswith("{"):
+                            json_str = decoded
+                            sys.stderr.write("Successfully decoded FIREBASE_SERVICE_ACCOUNT_JSON from base64.\n")
+                    except Exception as b64_err:
+                        sys.stderr.write(f"Attempted base64 decode but failed: {b64_err}\n")
+                
                 service_account_info = json.loads(json_str)
                 if "private_key" in service_account_info:
                     service_account_info["private_key"] = service_account_info["private_key"].replace("\\n", "\n")
@@ -160,11 +173,6 @@ def get_all_subscribed_courses() -> list:
     Returns a list of dicts: [{"course_code": "...", "subscribers": [...], "last_quota": ...}]
     """
     client = get_db()
-    # Query courses where subscribers list is not empty
-    # Note: Firestore doesn't support array length query directly, so we get all courses
-    # and filter in Python, or select where subscribers is not empty array.
-    # An empty array will not match "array_contains_any" or similar, but since we only have
-    # subscribed courses (we can clean up if subscribers becomes empty), we can just fetch all documents in 'courses'.
     courses_ref = client.collection("courses")
     docs = courses_ref.stream()
     
