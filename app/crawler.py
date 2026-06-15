@@ -72,14 +72,18 @@ async def query_courses(course_codes: list) -> dict:
             outer_url = "https://ais.ntou.edu.tw/outside.aspx?mainPage=LwBBAHAAcABsAGkAYwBhAHQAaQBvAG4ALwBUAEsARQAvAFQASwBFADIAMgAvAFQASwBFADIAMgAxADUAXwAuAGEAcwBwAHgAPwBwAHIAbwBnAGMAZAA9AFQASwBFADIAMgAxADUA"
             
             try:
-                await page.goto(outer_url, wait_until="networkidle", timeout=25000)
+                await page.goto(outer_url, wait_until="domcontentloaded", timeout=20000)
                 
-                # Find mainFrame
+                # Wait for mainFrame to be registered in page.frames
                 main_frame = None
-                for frame in page.frames:
-                    if frame.name == "mainFrame":
-                        main_frame = frame
+                for _ in range(100): # max wait 10 seconds
+                    for frame in page.frames:
+                        if frame.name == "mainFrame":
+                            main_frame = frame
+                            break
+                    if main_frame:
                         break
+                    await asyncio.sleep(0.1)
                 
                 if not main_frame:
                     print(f"Error: mainFrame not found for {code}!")
@@ -209,8 +213,9 @@ async def query_courses(course_codes: list) -> dict:
             finally:
                 await page.close()
                 
-        # Run all queries in parallel
-        await asyncio.gather(*(query_single_course(code) for code in course_codes))
+        # Run queries sequentially to prevent rate limiting, connection blocks and timeout on school server
+        for code in course_codes:
+            await query_single_course(code)
         await browser.close()
         
     return results
