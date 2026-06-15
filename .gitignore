@@ -1,0 +1,8 @@
+.env
+firebase-key.json
+__pycache__/
+.pytest_cache/
+*.pyc
+.vscode/
+cloudflared.exe
+*.log
