@@ -19,6 +19,8 @@ def init_db():
         if config.FIREBASE_SERVICE_ACCOUNT_JSON:
             try:
                 service_account_info = json.loads(config.FIREBASE_SERVICE_ACCOUNT_JSON)
+                if "private_key" in service_account_info:
+                    service_account_info["private_key"] = service_account_info["private_key"].replace("\\n", "\n")
                 cred = credentials.Certificate(service_account_info)
                 print("Initialized Firebase via service account JSON string.")
             except Exception as e:
