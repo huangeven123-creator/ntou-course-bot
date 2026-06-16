@@ -37,10 +37,36 @@ def init_db():
                 
                 service_account_info = json.loads(json_str)
                 if "private_key" in service_account_info:
-                    service_account_info["private_key"] = service_account_info["private_key"].replace("\\n", "\n")
+                    pk = service_account_info["private_key"]
+                    sys.stderr.write(f"Raw PK repr (first 60): {repr(pk)[:60]}\n")
+                    
+                    # Standardize PEM private key format
+                    pk = pk.strip().replace("\\n", "\n")
+                    header = "-----BEGIN PRIVATE KEY-----"
+                    footer = "-----END PRIVATE KEY-----"
+                    
+                    raw_key = pk
+                    if header in raw_key:
+                        raw_key = raw_key.replace(header, "")
+                    if footer in raw_key:
+                        raw_key = raw_key.replace(footer, "")
+                    
+                    # Remove all spaces and newlines
+                    raw_key = "".join(raw_key.split())
+                    
+                    # Reconstruct PEM format with standard 64 characters per line
+                    formatted_pk = header + "\n"
+                    for i in range(0, len(raw_key), 64):
+                        formatted_pk += raw_key[i:i+64] + "\n"
+                    formatted_pk += footer + "\n"
+                    
+                    service_account_info["private_key"] = formatted_pk
+                    sys.stderr.write(f"Normalized PK repr (first 60): {repr(formatted_pk)[:60]}\n")
                 cred = credentials.Certificate(service_account_info)
                 sys.stderr.write("Successfully initialized Firebase via service account JSON.\n")
             except Exception as e:
+                import traceback
+                traceback.print_exc(file=sys.stderr)
                 sys.stderr.write(f"Error parsing FIREBASE_SERVICE_ACCOUNT_JSON: {e}\n")
                 raise e
         
