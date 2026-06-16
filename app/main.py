@@ -808,7 +808,7 @@ DASHBOARD_HTML = """
             }).join('');
         }
 
-        // Helpers
+                // Helpers
         function showLoading(show, text) {
             if (show) {
                 if (text) loadingText.innerText = text;
@@ -817,6 +817,18 @@ DASHBOARD_HTML = """
                 loadingOverlay.style.display = 'none';
             }
         }
+
+        // Event Listeners (事件綁定)
+        btnAdd.addEventListener('click', addCourse);
+        courseInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addCourse();
+            }
+        });
+        searchFilter.addEventListener('input', renderCourses);
+
+        // Auto Refresh every 10 seconds (每 10 秒自動同步)
+        setInterval(fetchCourses, 10000);
 
         // Init
         fetchCourses();
